@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -79,17 +78,12 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-sky-500 hover:bg-sky-400 disabled:opacity-60 disabled:cursor-not-allowed text-black font-semibold py-2 rounded transition"
+          className="w-full  bg-sky-500 hover:bg-sky-400 disabled:opacity-60 disabled:cursor-not-allowed text-black font-semibold py-2 mt-4 rounded transition"
         >
           {loading ? "Logging in..." : "Login"}
         </button>
 
-        <div className="mt-4 text-xs text-slate-500 flex justify-between">
-          <span>Demo user: ali / 123456</span>
-          <Link href="/playground" className="text-sky-400 hover:underline">
-            Skip to playground →
-          </Link>
-        </div>
+        <div className="mt-4 text-xs text-slate-500 flex justify-between"></div>
       </form>
     </div>
   );

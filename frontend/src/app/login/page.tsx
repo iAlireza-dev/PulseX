@@ -1,16 +1,49 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function LoginPage() {
+  const router = useRouter();
+
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    // فعلاً فقط لاگ می‌کنیم، بعداً وصلش می‌کنیم به backend
-    console.log("login", { username, password });
+    setError(null);
+    setLoading(true);
+
+    try {
+      const res = await fetch("http://localhost:3001/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ username, password }),
+      });
+
+      if (!res.ok) {
+        let message = "Login failed";
+        try {
+          const data = await res.json();
+          if (data?.error) message = data.error;
+        } catch {}
+        setError(message);
+        return;
+      }
+
+      router.push("/playground");
+    } catch (err) {
+      console.error(err);
+      setError("Network error");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -35,21 +68,24 @@ export default function LoginPage() {
         <label className="block text-sm mb-1">Password</label>
         <input
           type="password"
-          className="w-full mb-6 px-3 py-2 bg-slate-900 border border-slate-700 rounded outline-none focus:border-sky-500"
+          className="w-full mb-2 px-3 py-2 bg-slate-900 border border-slate-700 rounded outline-none focus:border-sky-500"
           placeholder="••••••••"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
 
+        {error && <p className="text-xs text-red-400 mb-2">{error}</p>}
+
         <button
           type="submit"
-          className="w-full bg-sky-500 hover:bg-sky-400 text-black font-semibold py-2 rounded transition"
+          disabled={loading}
+          className="w-full bg-sky-500 hover:bg-sky-400 disabled:opacity-60 disabled:cursor-not-allowed text-black font-semibold py-2 rounded transition"
         >
-          Login
+          {loading ? "Logging in..." : "Login"}
         </button>
 
         <div className="mt-4 text-xs text-slate-500 flex justify-between">
-          <span>Demo project: PulseX</span>
+          <span>Demo user: ali / 123456</span>
           <Link href="/playground" className="text-sky-400 hover:underline">
             Skip to playground →
           </Link>

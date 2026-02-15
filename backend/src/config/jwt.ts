@@ -1,8 +1,8 @@
 import { SignJWT, jwtVerify } from "jose";
+import { env } from "./env";
 
-const secret = new TextEncoder().encode(
-  process.env.JWT_SECRET || "pulsex-dev-secret"
-);
+const secret = new TextEncoder().encode(env.jwtSecret);
+const alg = "HS256";
 
 export async function signAccessToken(payload: {
   sub: string;
@@ -18,4 +18,3 @@ export async function signAccessToken(payload: {
 export async function verifyAccessToken(token: string) {
   return jwtVerify(token, secret);
 }
-

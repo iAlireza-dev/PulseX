@@ -1,9 +1,10 @@
+import "dotenv/config";
 import http from "http";
 import { Server } from "socket.io";
 import { createApp } from "./app";
 import { verifyAccessToken } from "./config/jwt";
-
-const PORT = process.env.PORT || 3001;
+import { env } from "./config/env";
+import { redis } from "./config/redis";
 
 const app = createApp();
 const httpServer = http.createServer(app);
@@ -23,7 +24,7 @@ function parseCookies(cookieHeader?: string) {
 
 const io = new Server(httpServer, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: env.frontendOrigin,
     credentials: true,
   },
 });
@@ -111,6 +112,15 @@ io.on("connection", (socket) => {
   });
 });
 
-httpServer.listen(PORT, () => {
-  console.log(`🚀 PulseX backend running on http://localhost:${PORT}`);
+async function start() {
+  await redis.connect();
+
+  httpServer.listen(env.port, () => {
+    console.log(`🚀 PulseX backend running on http://localhost:${env.port}`);
+  });
+}
+
+start().catch((err) => {
+  console.error(err);
+  process.exit(1);
 });

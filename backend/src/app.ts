@@ -2,13 +2,14 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import authRoutes from "./auth/auth.routes";
+import { env } from "./config/env";
 
 export function createApp() {
   const app = express();
 
   app.use(
     cors({
-      origin: "http://localhost:3000", // Next frontend
+      origin: env.frontendOrigin,
       credentials: true,
     }),
   );

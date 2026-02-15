@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 
 const ROOMS = ["analytics", "monitoring", "alerts"];
+const BACKEND_URL = "http://localhost:3001";
 
 interface WelcomeData {
   user?: { username: string };
@@ -24,25 +25,49 @@ interface RoomMessageData {
   text: string;
 }
 
+interface RateLimitedData {
+  scope?: string;
+  retryAfter?: number;
+}
+
 export default function PlaygroundPage() {
   const [status, setStatus] = useState("Connecting...");
   const [logs, setLogs] = useState<string[]>([]);
   const [currentRoom, setCurrentRoom] = useState<string | null>(null);
   const [messageText, setMessageText] = useState("");
+  const [loggingOut, setLoggingOut] = useState(false);
   const socketRef = useRef<Socket | null>(null);
 
   function addLog(line: string) {
     setLogs((prev) => {
-      const next = [
-        ...prev,
-        `${new Date().toLocaleTimeString()} — ${line}`,
-      ];
+      const next = [...prev, `${new Date().toLocaleTimeString()} — ${line}`];
       return next.slice(-120);
     });
   }
 
+  async function handleLogout() {
+    if (loggingOut) return;
+    setLoggingOut(true);
+
+    try {
+      socketRef.current?.disconnect();
+      socketRef.current = null;
+
+      await fetch(`${BACKEND_URL}/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+    } finally {
+      setStatus("Disconnected");
+      setCurrentRoom(null);
+      setMessageText("");
+      setLogs([]);
+      window.location.href = "/login";
+    }
+  }
+
   useEffect(() => {
-    const socket = io("http://localhost:3001", {
+    const socket = io(BACKEND_URL, {
       withCredentials: true,
     });
 
@@ -54,16 +79,13 @@ export default function PlaygroundPage() {
     });
 
     socket.on("connect_error", (err) => {
-      console.error("Socket error:", err.message);
       setStatus("Connection failed");
       addLog(`Connection error: ${err.message}`);
     });
 
     socket.on("server:welcome", (data: WelcomeData) => {
       addLog(
-        `Welcome ${data.user?.username ?? "unknown"} (connected at ${
-          data.connectedAt
-        })`
+        `Welcome ${data.user?.username ?? "unknown"} (connected at ${data.connectedAt})`,
       );
     });
 
@@ -83,10 +105,19 @@ export default function PlaygroundPage() {
 
     socket.on("server:roomMessage", (data: RoomMessageData) => {
       addLog(
-        `[room:${data.room}] ${data.user?.username ?? "unknown"}: ${
-          data.text
-        }`
+        `[room:${data.room}] ${data.user?.username ?? "unknown"}: ${data.text}`,
       );
+    });
+
+    socket.on("server:rateLimited", (data: RateLimitedData) => {
+      const ms = Number(data?.retryAfter ?? 0);
+      const sec = ms > 0 ? (ms / 1000).toFixed(1) : "0";
+      addLog(`Rate limited (${data?.scope ?? "unknown"}) — retry in ${sec}s`);
+    });
+
+    socket.on("disconnect", () => {
+      setStatus("Disconnected");
+      addLog("Disconnected from server");
     });
 
     return () => {
@@ -135,9 +166,16 @@ export default function PlaygroundPage() {
             events.
           </p>
         </div>
-        <span className="text-xs px-3 py-1 rounded-full border border-emerald-500 text-emerald-400">
-          prototype
-        </span>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleLogout}
+            className="text-xs px-3 py-2 rounded border border-red-400 text-slate-200 hover:border-red-500 hover:text-sky-300 disabled:opacity-60"
+            disabled={loggingOut}
+          >
+            Logout
+          </button>
+        </div>
       </header>
 
       <main className="grid gap-4 md:grid-cols-3">
@@ -207,6 +245,7 @@ export default function PlaygroundPage() {
           <p className="text-xs text-slate-400 mb-2">
             Incoming and outgoing events will appear here in real-time.
           </p>
+
           <div className="h-64 bg-slate-900 border border-slate-800 rounded-md text-xs p-2 overflow-auto mb-3">
             {logs.length === 0 ? (
               <span className="text-slate-500">

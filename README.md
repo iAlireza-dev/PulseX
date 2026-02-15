@@ -160,7 +160,7 @@ redis-cli ping
 ____
 
 
-2️⃣ Backend Setup
+### 2️⃣ Backend Setup
 -Navigate to the backend directory:
 -cd backend
 -npm install
@@ -174,7 +174,7 @@ REDIS_URL=redis://localhost:6379
 
 ____
 
-3️⃣ Frontend Setup
+### 3️⃣ Frontend Setup
 -cd frontend
 -npm install
 -npm run dev

@@ -1,8 +1,9 @@
+import "dotenv/config";
+import { env } from "./config/env";
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import authRoutes from "./auth/auth.routes";
-import { env } from "./config/env";
 
 export function createApp() {
   const app = express();

@@ -1,10 +1,10 @@
-import "dotenv/config";
 import http from "http";
 import { Server } from "socket.io";
 import { createApp } from "./app";
 import { verifyAccessToken } from "./config/jwt";
 import { env } from "./config/env";
 import { redis } from "./config/redis";
+import { wsMessageRateLimiter, wsPingRateLimiter } from "./rate-limit/wsRatelimiter";
 
 const app = createApp();
 const httpServer = http.createServer(app);
@@ -46,7 +46,7 @@ io.use(async (socket, next) => {
     };
 
     next();
-  } catch (err) {
+  } catch {
     return next(new Error("Unauthorized: invalid token"));
   }
 });
@@ -60,8 +60,22 @@ io.on("connection", (socket) => {
     connectedAt: new Date().toISOString(),
   });
 
-  socket.on("client:ping", () => {
-    console.log("📡 ping from", socket.data.user);
+  socket.on("client:ping", async () => {
+    const userId = socket.data.user?.id;
+    if (!userId) return;
+
+    try {
+      await wsPingRateLimiter.consume(String(userId));
+    } catch (err: any) {
+      if (err?.msBeforeNext) {
+        socket.emit("server:rateLimited", {
+          scope: "ping",
+          retryAfter: err.msBeforeNext,
+        });
+      }
+      return;
+    }
+
     socket.emit("server:pong", {
       ts: new Date().toISOString(),
     });
@@ -94,10 +108,25 @@ io.on("connection", (socket) => {
     socket.emit("server:roomLeft", {});
   });
 
-  socket.on("client:roomMessage", (data: { text: string }) => {
+  socket.on("client:roomMessage", async (data: { text: string }) => {
+    const userId = socket.data.user?.id;
+    if (!userId) return;
+
     const room = socket.data.room as string | undefined;
     const text = data?.text?.trim();
     if (!room || !text) return;
+
+    try {
+      await wsMessageRateLimiter.consume(String(userId));
+    } catch (err: any) {
+      if (err?.msBeforeNext) {
+        socket.emit("server:rateLimited", {
+          scope: "roomMessage",
+          retryAfter: err.msBeforeNext,
+        });
+      }
+      return;
+    }
 
     io.to(room).emit("server:roomMessage", {
       room,

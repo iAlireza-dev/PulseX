@@ -42,7 +42,18 @@ router.post("/login", async (req, res) => {
     httpOnly: true,
     sameSite: "lax",
     secure: false,
-    maxAge: 60 * 60 * 1000,
+    maxAge: 60 * 60,
+  });
+
+  res.json({ ok: true });
+});
+
+router.post("/logout", async (_req, res) => {
+  res.clearCookie("access_token", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: false,
+    path: "/",
   });
 
   res.json({ ok: true });

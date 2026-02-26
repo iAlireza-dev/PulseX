@@ -52,6 +52,7 @@ Logout clears the cookie and invalidates access to protected routes.
 ⸻
 
 ⚡ Features
+
 • JWT-based authentication (HttpOnly cookie)
 • Protected routes via Next.js middleware
 • Secure WebSocket authentication
@@ -63,6 +64,8 @@ Logout clears the cookie and invalidates access to protected routes.
 • Structured separation of concerns
 • Environment-based configuration
 • Clean git history with feature-scoped commits
+•Socket.IO Redis adapter for horizontal scaling across multiple backend instances
+• Multi-instance playground support via `?backend=` query param for cross-server testing
 
 ⸻
 

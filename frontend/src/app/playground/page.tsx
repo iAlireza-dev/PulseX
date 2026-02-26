@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
+import { useSearchParams } from "next/navigation";
 
 const ROOMS = ["analytics", "monitoring", "alerts"];
-const BACKEND_URL = "http://localhost:3001";
 
 interface WelcomeData {
   user?: { username: string };
@@ -31,6 +31,10 @@ interface RateLimitedData {
 }
 
 export default function PlaygroundPage() {
+  const searchParams = useSearchParams();
+  const backendPort = searchParams.get("backend") ?? "3001";
+  const backendUrl = `http://localhost:${backendPort}`;
+
   const [status, setStatus] = useState("Connecting...");
   const [logs, setLogs] = useState<string[]>([]);
   const [currentRoom, setCurrentRoom] = useState<string | null>(null);
@@ -53,7 +57,7 @@ export default function PlaygroundPage() {
       socketRef.current?.disconnect();
       socketRef.current = null;
 
-      await fetch(`${BACKEND_URL}/auth/logout`, {
+      await fetch(`${backendUrl}/auth/logout`, {
         method: "POST",
         credentials: "include",
       });
@@ -67,7 +71,7 @@ export default function PlaygroundPage() {
   }
 
   useEffect(() => {
-    const socket = io(BACKEND_URL, {
+    const socket = io(backendUrl, {
       withCredentials: true,
     });
 
@@ -75,7 +79,7 @@ export default function PlaygroundPage() {
 
     socket.on("connect", () => {
       setStatus("Connected");
-      addLog("Connected to server");
+      addLog(`Connected to server (${backendUrl})`);
     });
 
     socket.on("connect_error", (err) => {
@@ -123,7 +127,7 @@ export default function PlaygroundPage() {
     return () => {
       socket.disconnect();
     };
-  }, []);
+  }, [backendUrl]);
 
   function handlePing() {
     if (!socketRef.current) {
@@ -152,7 +156,7 @@ export default function PlaygroundPage() {
     const text = messageText.trim();
     if (!text || !currentRoom) return;
     socketRef.current.emit("client:roomMessage", { text });
-    addLog(`[you -> ${currentRoom}]: ${text}`);
+    addLog(`[you -> ${currentRoom} @ ${backendPort}]: ${text}`);
     setMessageText("");
   }
 
@@ -167,14 +171,22 @@ export default function PlaygroundPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <div className="text-xs px-3 py-1 rounded-full border border-slate-700 text-slate-300">
+            backend: <span className="font-mono">{backendUrl}</span>
+          </div>
+
           <button
             onClick={handleLogout}
-            className="text-xs px-3 py-2 rounded border border-red-400 text-slate-200 hover:border-red-500 hover:text-sky-300 disabled:opacity-60"
+            className="text-xs px-3 py-1.5 rounded border border-slate-700 text-slate-200 hover:border-sky-400 hover:text-sky-300 disabled:opacity-60"
             disabled={loggingOut}
           >
             Logout
           </button>
+
+          <span className="text-xs px-3 py-1 rounded-full border border-emerald-500 text-emerald-400">
+            prototype
+          </span>
         </div>
       </header>
 

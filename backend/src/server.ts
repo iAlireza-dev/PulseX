@@ -5,6 +5,7 @@ import { verifyAccessToken } from "./config/jwt";
 import { env } from "./config/env";
 import { redis } from "./config/redis";
 import { wsMessageRateLimiter, wsPingRateLimiter } from "./rate-limit/wsRatelimiter";
+import { attachRedisAdapter } from "./ws/redisAdapter";
 
 const app = createApp();
 const httpServer = http.createServer(app);
@@ -143,9 +144,20 @@ io.on("connection", (socket) => {
 
 async function start() {
   await redis.connect();
+  const detachAdapter = await attachRedisAdapter(io);
 
   httpServer.listen(env.port, () => {
     console.log(`🚀 PulseX backend running on http://localhost:${env.port}`);
+  });
+
+  process.on("SIGINT", async () => {
+    await detachAdapter();
+    process.exit(0);
+  });
+
+  process.on("SIGTERM", async () => {
+    await detachAdapter();
+    process.exit(0);
   });
 }
 
